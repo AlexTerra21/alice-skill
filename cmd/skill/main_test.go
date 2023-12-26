@@ -75,7 +75,7 @@ func TestWebhook(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.method, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			// делаем запрос с помощью библиотеки resty к адресу запущенного сервера,
 			// который хранится в поле URL соответствующей структуры
 			req := resty.New().R()
