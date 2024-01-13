@@ -22,14 +22,6 @@ func TestWebhook(t *testing.T) {
 	// останавливаем сервер после завершения теста
 	defer srv.Close()
 
-	// ожидаемое содержимое тела ответа при успешном запросе
-	successBody := `{
-        "response": {
-            "text": "Извините, я пока ничего не умею"
-        },
-        "version": "1.0"
-    }`
-
 	// описываем набор данных: метод запроса, ожидаемый код ответа, ожидаемое тело
 	testCases := []struct {
 		name         string
@@ -72,9 +64,9 @@ func TestWebhook(t *testing.T) {
 		{
 			name:         "method_post_success",
 			method:       http.MethodPost,
-			body:         `{"request": {"type": "SimpleUtterance", "command": "sudo do something"}, "version": "1.0"}`,
+			body:         `{"request": {"type": "SimpleUtterance", "command": "sudo do something"}, "session": {"new": true}, "version": "1.0"}`,
 			expectedCode: http.StatusOK,
-			expectedBody: successBody,
+			expectedBody: `Точное время .* часов, .* минут. Для вас нет новых сообщений.`,
 		},
 	}
 
@@ -97,7 +89,8 @@ func TestWebhook(t *testing.T) {
 			assert.Equal(t, tc.expectedCode, resp.StatusCode(), "Response code didn't match expected")
 			// проверяем корректность полученного тела ответа, если мы его ожидаем
 			if tc.expectedBody != "" {
-				assert.JSONEq(t, tc.expectedBody, string(resp.Body()))
+				// сравниваем тело ответа с ожидаемым шаблоном
+				assert.Regexp(t, tc.expectedBody, string(resp.Body()))
 			}
 		})
 	}
@@ -112,16 +105,12 @@ func TestGzipCompression(t *testing.T) {
             "type": "SimpleUtterance",
             "command": "sudo do something"
         },
+		"session": {"new": true},
         "version": "1.0"
     }`
 
 	// ожидаемое содержимое тела ответа при успешном запросе
-	successBody := `{
-        "response": {
-            "text": "Извините, я пока ничего не умею"
-        },
-        "version": "1.0"
-    }`
+	successBody := `Точное время .* часов, .* минут. Для вас нет новых сообщений.`
 
 	t.Run("sends_gzip", func(t *testing.T) {
 		buf := bytes.NewBuffer(nil)
@@ -146,7 +135,7 @@ func TestGzipCompression(t *testing.T) {
 		b, err := io.ReadAll(zr)
 		require.NoError(t, err)
 
-		require.JSONEq(t, successBody, string(b))
+		assert.Regexp(t, successBody, string(b))
 
 	})
 
@@ -168,6 +157,7 @@ func TestGzipCompression(t *testing.T) {
 		b, err := io.ReadAll(zr)
 		require.NoError(t, err)
 
-		require.JSONEq(t, successBody, string(b))
+		assert.Regexp(t, successBody, string(b))
+
 	})
 }
